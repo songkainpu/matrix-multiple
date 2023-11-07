@@ -17,8 +17,8 @@ multiprocessing.set_start_method('fork')
 MATRICES_FILE_FOLDER = "matrices"
 
 logger: logging.Logger = logging.getLogger(name=__name__)
-DEFAULT_SCALES: typing.List[int] = [16, 32, 64, 128, 256, 512, 1024, 2048]
-# DEFAULT_SCALES: typing.List[int] = [2048]
+# DEFAULT_SCALES: typing.List[int] = [16, 32, 64, 128, 256, 512, 1024, 2048]
+DEFAULT_SCALES: typing.List[int] = [2048]
 
 # DEFAULT_SCALES: typing.List[int] = [16]
 SHARE_MEMO_NAME = "matrix calculate"
@@ -126,7 +126,8 @@ def _compute_matrices():
     for scale in DEFAULT_SCALES:
         directed_time = []
         fox_time = []
-        for t in range(10):
+        for t in range(4):
+            time.sleep(1)
             pool: multiprocessing.Pool = multiprocessing.Pool(processes=4)
             A = numpy.loadtxt(f"{MATRICES_FILE_FOLDER}{os.path.sep}{scale}-{t}-A.csv",
                               delimiter=',', dtype=numpy.int32)
@@ -185,8 +186,8 @@ def _compute_matrices():
             for share_memo in shm_list:
                 share_memo.close()
                 share_memo.unlink()
-            main_thread_shm = multiprocessing.shared_memory.SharedMemory(name=SHARE_MEMO_NAME)
-            shared_result_matrix = numpy.ndarray((scale, scale), dtype=numpy.int32, buffer=main_thread_shm.buf)
+            # main_thread_shm = multiprocessing.shared_memory.SharedMemory(name=SHARE_MEMO_NAME)
+            # shared_result_matrix = numpy.ndarray((scale, scale), dtype=numpy.int32, buffer=main_thread_shm.buf)
             shm.close()
             shm.unlink()
         print(f"scale:{scale}, fox_time:{fox_time}")
@@ -197,14 +198,14 @@ def compute_single() -> None:
     global DEFAULT_SCALES
     for scale in DEFAULT_SCALES:
         synchronize_time = []
-        for t in range(10):
+        for t in range(4):
             A = numpy.loadtxt(f"{MATRICES_FILE_FOLDER}{os.path.sep}{scale}-{t}-A.csv",
                               delimiter=',', dtype=numpy.int32)
             B = numpy.loadtxt(f"{MATRICES_FILE_FOLDER}{os.path.sep}{scale}-{t}-B.csv",
                               delimiter=',', dtype=numpy.int32)
             start_time = time.time()
             result: numpy.ndarray = numpy.zeros_like(A)
-            directed_result = matrix_multiple(matrix1=A, matrix2=B, result=result)
+            directed_result = fox_compute_synchronize(matrix1=A, matrix2=B, result=result)
             end_time = time.time()
             synchronize_time.append(end_time - start_time)
         print(f"scale:{scale}, synchronize_time:{synchronize_time}")
@@ -220,6 +221,9 @@ def __main() -> None:
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     p = multiprocessing.Process(target=__main)
-    p2 = multiprocessing.Process(target=compute_single)
+    # p2 = multiprocessing.Process(target=compute_single)
     p.start()
+    t = threading.Thread(target=compute_single)
+    t.start()
     p.join()
+    t.join()
