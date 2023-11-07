@@ -134,6 +134,7 @@ if __name__ == "__main__":
                         count += 1
                         my_queue.put(item=(0, A, B, i, j, k, block_size, scale))
             gpu_coroutine_list: typing.List[gevent.Greenlet] = []
+            print(f"num_gpu:{num_gpu}")
             for i in range(num_gpu):
                 device = platform.get_devices()[i]
                 context = cl.Context([device])
