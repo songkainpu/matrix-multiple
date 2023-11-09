@@ -17,8 +17,8 @@ multiprocessing.set_start_method('fork')
 MATRICES_FILE_FOLDER = "matrices"
 
 logger: logging.Logger = logging.getLogger(name=__name__)
-# DEFAULT_SCALES: typing.List[int] = [16, 32, 64, 128, 256, 512, 1024, 2048]
-DEFAULT_SCALES: typing.List[int] = [2048]
+DEFAULT_SCALES: typing.List[int] = [16, 32, 64, 128, 256, 512, 1024, 2048]
+# DEFAULT_SCALES: typing.List[int] = [2048]
 
 # DEFAULT_SCALES: typing.List[int] = [16]
 SHARE_MEMO_NAME = "matrix calculate"
