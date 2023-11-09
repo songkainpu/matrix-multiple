@@ -75,7 +75,7 @@ def __compute(i: int, j: int, k: int, block_size: int, scale: int):
     with lock:
         shared_result_matrix[c_left:c_right, c_top:c_bottom] += cur_result
     shm.close()
-
+    shm.unlink()
 
 @functools.cache
 def compute_2_pow(exponent: int) -> int:
@@ -223,7 +223,7 @@ if __name__ == "__main__":
     p = multiprocessing.Process(target=__main)
     # p2 = multiprocessing.Process(target=compute_single)
     p.start()
-    t = threading.Thread(target=compute_single)
-    t.start()
+    # t = threading.Thread(target=compute_single)
+    # t.start()
     p.join()
-    t.join()
+    # t.join()
