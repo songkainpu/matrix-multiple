@@ -18,10 +18,9 @@ MATRICES_FILE_FOLDER = "matrices"
 
 logger: logging.Logger = logging.getLogger(name=__name__)
 DEFAULT_SCALES: typing.List[int] = [16, 32, 64, 128, 256, 512, 1024, 2048]
-# DEFAULT_SCALES: typing.List[int] = [2048]
 
 # DEFAULT_SCALES: typing.List[int] = [16]
-SHARE_MEMO_NAME = "matrix calculate"
+SHARE_MEMO_NAME = "matrix_calculate"
 
 parser = argparse.ArgumentParser(description='This is a demo to compute matrices by fox algorithm, '
                                              'The demo will compute the matrices randomly generated in the size of'
@@ -37,8 +36,8 @@ def _generate_matrices(scales: typing.Sequence[int] = None, ):
         scales = DEFAULT_SCALES
     for scale in scales:
         for i in range(10):
-            result = (numpy.random.randint(0, 255, size=(scale, scale), dtype=numpy.int32),
-                      numpy.random.randint(0, 255, size=(scale, scale), dtype=numpy.int32))
+            result = (numpy.random.randint(0, 255, size=(scale, scale), dtype=numpy.uint8),
+                      numpy.random.randint(0, 255, size=(scale, scale), dtype=numpy.uint8))
             numpy.savetxt(fname=f"{MATRICES_FILE_FOLDER}{os.path.sep}{scale}-{i}-A.csv",
                           X=result[0], delimiter=',', fmt='%d')
             numpy.savetxt(fname=f"{MATRICES_FILE_FOLDER}{os.path.sep}{scale}-{i}-B.csv",
@@ -75,7 +74,6 @@ def __compute(i: int, j: int, k: int, block_size: int, scale: int):
     with lock:
         shared_result_matrix[c_left:c_right, c_top:c_bottom] += cur_result
     shm.close()
-    shm.unlink()
 
 @functools.cache
 def compute_2_pow(exponent: int) -> int:
@@ -122,13 +120,15 @@ def fox_compute_synchronize(matrix1: numpy.ndarray, matrix2: numpy.ndarray,
 
 
 def _compute_matrices():
+    num_cores = multiprocessing.cpu_count()
+
     global DEFAULT_SCALES
     for scale in DEFAULT_SCALES:
         directed_time = []
         fox_time = []
-        for t in range(4):
+        for t in range(10):
             time.sleep(1)
-            pool: multiprocessing.Pool = multiprocessing.Pool(processes=4)
+            pool: multiprocessing.Pool = multiprocessing.Pool(processes=max(num_cores//2, 1))
             A = numpy.loadtxt(f"{MATRICES_FILE_FOLDER}{os.path.sep}{scale}-{t}-A.csv",
                               delimiter=',', dtype=numpy.int32)
             B = numpy.loadtxt(f"{MATRICES_FILE_FOLDER}{os.path.sep}{scale}-{t}-B.csv",
@@ -137,7 +137,7 @@ def _compute_matrices():
             shm = shared_memory.SharedMemory(name=SHARE_MEMO_NAME, create=True, size=result.nbytes)
             shared_result_matrix = numpy.ndarray(result.shape, dtype=numpy.int32, buffer=shm.buf)
             shared_result_matrix[:] = result
-            sub_matrix_count = 2
+            sub_matrix_count = max(num_cores//2, 1)
             block_size = scale // sub_matrix_count
             process_list = []
             start_time = time.time()
@@ -180,7 +180,7 @@ def _compute_matrices():
                             print(f"i:{i},j:{j},k:{k}")
             for process_task in process_list:
                 process_task.wait()
-                process_task.get()
+                # process_task.get()
             end_time = time.time()
             fox_time.append(end_time - start_time)
             for share_memo in shm_list:
@@ -221,9 +221,9 @@ def __main() -> None:
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     p = multiprocessing.Process(target=__main)
-    # p2 = multiprocessing.Process(target=compute_single)
+    p2 = multiprocessing.Process(target=compute_single)
     p.start()
-    # t = threading.Thread(target=compute_single)
-    # t.start()
+    t = threading.Thread(target=compute_single)
+    t.start()
     p.join()
-    # t.join()
+    t.join()
